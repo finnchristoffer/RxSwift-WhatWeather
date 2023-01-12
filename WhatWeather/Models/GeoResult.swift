@@ -9,10 +9,10 @@ import Foundation
 
 extension GeoResult {
     static var empty: GeoResult {
-        return GeoResult(lat: 0.0, lon: 0.0)
+        return GeoResult(lat: nil, lon: nil)
     }
 }
 struct GeoResult: Decodable {
-    let lat: Double
-    let lon: Double
+    let lat: Double?
+    let lon: Double?
 }

@@ -23,17 +23,19 @@ class ViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        self.cityNameTextField.rx.value.subscribe(onNext: { city in
-            
-            if let city = city {
-                if city.isEmpty {
-                    self.displayWeather(nil)
-                } else {
-                    self.fetchGeo(by: city)
-//                    self.fetchWeather(lat: <#T##Double#>, lon: <#T##Double#>)
+        self.cityNameTextField.rx.controlEvent(.editingDidEndOnExit)
+            .asObservable()
+            .map { self.cityNameTextField.text}
+            .subscribe(onNext: {city in
+                
+                if let city = city {
+                    if city.isEmpty {
+                        self.displayWeather(nil)
+                    } else {
+                        self.fetchGeo(by: city)
+                    }
                 }
-            }
-        }).disposed(by: disposeBag)
+            }).disposed(by: disposeBag)
     }
 
     private func displayWeather(_ weather: Weather?) {
@@ -56,14 +58,17 @@ class ViewController: UIViewController {
 
         let resource = Resource<WeatherResult>(url: url)
 
-        URLRequest.load(resource: resource)
+        let search = URLRequest.load(resource: resource)
             .observe(on: MainScheduler.instance)
             .catchAndReturn(WeatherResult.empty)
-            .subscribe(onNext: { result in
-                print(result)
-                let weather = result.main
-                self.displayWeather(weather)
-            }).disposed(by: disposeBag)
+        
+        search.map { "\($0.main.temp) ℃" }
+            .bind(to: self.temperatureLabel.rx.text)
+            .disposed(by: disposeBag)
+        
+        search.map { "\($0.main.humidity) 💦"}
+            .bind(to: self.humidityLabel.rx.text)
+            .disposed(by: disposeBag)
     }
 
     
@@ -80,13 +85,10 @@ class ViewController: UIViewController {
                         .catchAndReturn([GeoResult.empty])
                         .subscribe(onNext: { result in
                             print(result.first)
-                            guard let geo = result.first else {return}
-                            self.fetchWeather(lat: geo.lat, lon: geo.lon)
+                            guard let geo = result.first, let lat = geo.lat, let lon = geo.lon else {return}
+                            self.fetchWeather(lat: lat, lon: lon)
                         }).disposed(by: disposeBag)
 
         }
-
-    
-
 }
 
